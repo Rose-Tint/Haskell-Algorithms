@@ -11,7 +11,7 @@ module Structs.Tree (
     fmerge,
     size,
     flatten,
-    rebalance,
+    balance,
 ) where
 
 
@@ -31,28 +31,30 @@ newTree a = Node a Empty Empty
 -- Worst case: O(log n)
 insert :: (Ord a) => Tree a -> a -> Tree a
 insert Empty y = Node y Empty Empty
-insert (Node x Empty Empty) y = Node x (Node y Empty Empty) Empty
-insert (Node x le Empty) y = Node x le (Node y Empty Empty)
-insert (Node x Empty ri) y = Node x ri (Node y Empty Empty)
+insert (Node x Empty Empty) y = Node x (newTree y) Empty
+insert (Node x le Empty) y = Node x le (newTree y)
+insert (Node x Empty ri) y = Node x ri (newTree y)
 insert t@(Node x le ri) y
     | (y == x) = t
     | (y < x) = Node x (insert le y) ri
-    | (y > x) = Node x le (insert ri y)
+    | otherwise = Node x le (insert ri y)
 
 
 -- Worst case: O(log n)
 search :: (Ord a) => Tree a -> a -> Tree a
 search Empty _ = Empty
-search (Node x le ri) y
-    | (y == x) = Node x le ri
+search t@(Node x le ri) y
+    | (y == x) = t
     | (y < x) = search le y
-    | (y > x) = search ri y
+    | otherwise = search ri y
 
 
 -- O(log n)
 height :: Tree b -> Int
 height Empty = 0
 height (Node _ Empty Empty) = 0
+height (Node _ le Empty) = 1 + height le
+height (Node _ Empty ri) = 1 + height ri
 height (Node _ le ri) = 1 + max (height le) (height ri)
 
 
@@ -67,7 +69,10 @@ fmerge :: (b -> c -> d) -> Tree b -> Tree c -> Tree d
 fmerge _ Empty Empty = Empty
 fmerge f (Node lx ll lr) (Node rx rl rr)
     = Node (f lx rx) (fmerge f ll rl) (fmerge f lr rr)
-fmerge f Empty ri = error "Tree Tree -> fmerge: Trees do not match in structure"
+fmerge f Empty ri
+    = error "Tree Tree -> fmerge: Trees do not match in structure"
+fmerge f le Empty
+    = error "Tree Tree -> fmerge: Trees do not match in structure"
 
 
 -- O(n)
@@ -76,44 +81,29 @@ size Empty = 0
 size (Node _ le ri) = 1 + size le + size ri
 
 
--- Worst case O(log (n - 1))
-slope :: Tree a -> Int
-slope Empty = 0
-slope (Node _ le ri) = height le - height ri
-
-
 -- Too complicated...
-rebalance :: Tree a -> Tree a
-rebalance Empty = Empty
-rebalance t@(Node x le ri)
-    | (abs sy < 2) = t
-    | (sy >= 2 && sl /= -1) = rotR t
-    | (sy >= 2 && sl == -1) = rotR $ Node x (rotL le) ri
-    | (sy <= -2 && sr /= 1) = rotL $ Node x le ri
-    | (sy <= -2 && sr == 1) = rotL $ Node x le (rotR ri)
+balance :: Tree a -> Tree a
+balance Empty = Empty
+balance t@(Node x le ri)
+    | (abs st < 2) = t
+    | (st >= 2 && sl /= -1) = rotR t
+    | (st >= 2 && sl == -1) = rotR $ Node x (rotL le) ri
+    | (st <= -2 && sr /= 1) = rotL $ Node x le ri
+    | (st <= -2 && sr == 1) = rotL $ Node x le (rotR ri)
         where
             slope Empty = 0
             slope (Node _ le ri) = height le - height ri
-            (x,le,ri) = (value t, left t, right t)
-            (sy,sl,sr) = (slope t, slope le, slope ri)
-            rotL (Node _x _le (Node rx rl rr))
-                = rebalance $ Node rx (rebalance $ Node _x _le rl) (rebalance rr)
-            rotR (Node _x (Node lx ll lr) _ri)
-                = rebalance $ Node lx (rebalance ll) (rebalance $ Node _x lr _ri)
+            (st,sl,sr) = (slope t, slope le, slope ri)
+            rotL (Node x' le' (Node rx rl rr))
+                = balance $ Node rx (balance $ Node x' le' rl) (balance rr)
+            rotR (Node x' (Node lx ll lr) ri')
+                = balance $ Node lx (balance ll) (balance $ Node x' lr ri')
 
 
 -- O(n)
 flatten :: Tree a -> [a]
 flatten Empty = []
 flatten (Node x le ri) = flatten le ++ (x:(flatten ri))
-
-
--- Too complicated...
-order :: (Tree a -> Tree a -> Ordering) -> Tree a -> Tree a
-order _ Empty = Empty
-order f (Node x le ri) = if f le ri == GT
-    then Node x (order f ri) (order f le)
-    else Node x (order f le) (order f ri)
 
 
 instance Functor Tree where
@@ -131,9 +121,8 @@ instance Foldable Tree where
 
 instance Applicative Tree where
     pure = newTree
-    Empty <*> Empty = Empty
-    (Node f fl fr) <*> (Node a al ar)
-        = Node (f a) (fl <*> al) (fr <*> ar)
+    (Node f fl fr) <*> (Node x le ri)
+        = Node (f x) (fl <*> le) (fr <*> ri)
     _ <*> _ = Empty
 
 
@@ -160,8 +149,8 @@ instance (Show a) => Show (Tree a) where
 showImpl :: (Show a) => Int -> Tree a -> String
 showImpl n Empty = nTabs n ++ "[_]\n"
 showImpl n (Node x Empty Empty) = nTabs n ++ "[" ++ show x ++ "]\n"
-showImpl n (Node x le ri) =
-    showImpl (n + 1) le ++ nTabs n ++ "[" ++ show x ++ "]\n" ++ showImpl (n + 1) ri
+showImpl n (Node x le ri) = showNext le++nTabs n++"["++show x++"]\n"++showNext ri
+    where showNext = showImpl (n + 1)
 
 
 nTabs :: Int -> [Char]
