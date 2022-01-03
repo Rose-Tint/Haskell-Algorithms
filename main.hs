@@ -9,7 +9,9 @@ nFullRows n = rebalance $ foldl insert Empty [0..(2 ^ n - 2)]
 
 
 main :: IO ()
-main = print minHeap
+main = do
+    putStrLn ("size: " ++ show (size tree))
+    print tree
+    print $ flatten tree
     where
-        tree = nFullRows 4
-        minHeap = minHeapify tree
+        tree = minHeapify $ nFullRows 4

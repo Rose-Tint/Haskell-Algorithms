@@ -10,6 +10,7 @@ module Structs.Tree (
     invert,
     fmerge,
     size,
+    flatten,
     rebalance,
 ) where
 
@@ -27,6 +28,7 @@ newTree :: a -> Tree a
 newTree a = Node a Empty Empty
 
 
+-- Worst case: O(log n)
 insert :: (Ord a) => Tree a -> a -> Tree a
 insert Empty y = Node y Empty Empty
 insert (Node x Empty Empty) y = Node x (Node y Empty Empty) Empty
@@ -38,25 +40,29 @@ insert t@(Node x le ri) y
     | (y > x) = Node x le (insert ri y)
 
 
+-- Worst case: O(log n)
 search :: (Ord a) => Tree a -> a -> Tree a
-search Empty y = Empty
+search Empty _ = Empty
 search (Node x le ri) y
     | (y == x) = Node x le ri
     | (y < x) = search le y
     | (y > x) = search ri y
 
 
+-- O(log n)
 height :: Tree b -> Int
 height Empty = 0
 height (Node _ Empty Empty) = 0
 height (Node _ le ri) = 1 + max (height le) (height ri)
 
 
+-- O(n)
 invert :: (Ord a) => Tree a -> Tree a
 invert Empty = Empty
 invert (Node x le ri) = Node x (invert ri) (invert le)
 
 
+-- O(n)
 fmerge :: (b -> c -> d) -> Tree b -> Tree c -> Tree d
 fmerge _ Empty Empty = Empty
 fmerge f (Node lx ll lr) (Node rx rl rr)
@@ -64,16 +70,19 @@ fmerge f (Node lx ll lr) (Node rx rl rr)
 fmerge f Empty ri = error "Tree Tree -> fmerge: Trees do not match in structure"
 
 
+-- O(n)
 size :: Tree a -> Int
 size Empty = 0
 size (Node _ le ri) = 1 + size le + size ri
 
 
+-- Worst case O(log (n - 1))
 slope :: Tree a -> Int
 slope Empty = 0
 slope (Node _ le ri) = height le - height ri
 
 
+-- Too complicated...
 rebalance :: Tree a -> Tree a
 rebalance Empty = Empty
 rebalance t@(Node x le ri)
@@ -91,6 +100,20 @@ rebalance t@(Node x le ri)
                 = rebalance $ Node rx (rebalance $ Node _x _le rl) (rebalance rr)
             rotR (Node _x (Node lx ll lr) _ri)
                 = rebalance $ Node lx (rebalance ll) (rebalance $ Node _x lr _ri)
+
+
+-- O(n)
+flatten :: Tree a -> [a]
+flatten Empty = []
+flatten (Node x le ri) = flatten le ++ (x:(flatten ri))
+
+
+-- Too complicated...
+order :: (Tree a -> Tree a -> Ordering) -> Tree a -> Tree a
+order _ Empty = Empty
+order f (Node x le ri) = if f le ri == GT
+    then Node x (order f ri) (order f le)
+    else Node x (order f le) (order f ri)
 
 
 instance Functor Tree where
@@ -133,7 +156,6 @@ instance (Show a) => Show (Tree a) where
 
 
 {- IMPLIMENTATION DETAILS -}
-
 
 showImpl :: (Show a) => Int -> Tree a -> String
 showImpl n Empty = nTabs n ++ "[_]\n"
