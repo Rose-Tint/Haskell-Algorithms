@@ -30,10 +30,7 @@ newTree a = Node a Empty Empty
 
 -- Worst case: O(log n)
 insert :: (Ord a) => Tree a -> a -> Tree a
-insert Empty y = Node y Empty Empty
-insert (Node x Empty Empty) y = Node x (newTree y) Empty
-insert (Node x le Empty) y = Node x le (newTree y)
-insert (Node x Empty ri) y = Node x ri (newTree y)
+insert Empty y = newTree y
 insert t@(Node x le ri) y
     | (y == x) = t
     | (y < x) = Node x (insert le y) ri
