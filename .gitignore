@@ -1,7 +1,4 @@
 /.*
 !.git*
 
-/bin*
-*.hi
-*.o
-*.exe
+/dist*

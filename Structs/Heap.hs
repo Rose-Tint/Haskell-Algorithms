@@ -16,13 +16,14 @@ class MaxHeap a where
 instance MinHeap Tree where
     minMoveDown Empty = Empty
     minMoveDown t@(Node _ Empty Empty) = t
-    minMoveDown t@(Node x (Node lx ll lr) Empty)
+    minMoveDown (Node x (Node lx ll lr) Empty)
         = Node sm (minMoveDown $ Node lg ll lr) Empty
             where (sm, lg) = if x < lx then (x, lx) else (lx, x)
     minMoveDown t@(Node x le@(Node lx ll lr) ri@(Node rx rl rr))
         | (x <= lx && x <= rx) = t
         | (lx <= x && lx <= rx) = Node lx (minMoveDown $ Node x ll lr) ri
         | (rx <= x && rx <= lx) = Node rx le (minMoveDown $ Node x rl rr)
+    minMoveDown _ = error "minMoveDown"
 
     minHeapify Empty = Empty
     minHeapify (Node x le ri)
@@ -32,13 +33,14 @@ instance MinHeap Tree where
 instance MaxHeap Tree where
     maxMoveDown Empty = Empty
     maxMoveDown t@(Node _ Empty Empty) = t
-    maxMoveDown t@(Node x (Node lx ll lr) Empty)
+    maxMoveDown (Node x (Node lx ll lr) Empty)
         = Node lg (maxMoveDown $ Node sm ll lr) Empty
             where (sm, lg) = if x < lx then (x, lx) else (lx, x)
     maxMoveDown t@(Node x le@(Node lx ll lr) ri@(Node rx rl rr))
         | (x >= lx && x >= rx) = t
         | (lx >= x && lx >= rx) = Node lx (maxMoveDown $ Node x ll lr) ri
         | (rx >= x && rx >= lx) = Node rx le (maxMoveDown $ Node x rl rr)
+    maxMoveDown _ = error "maxMoveDown"
 
     maxHeapify Empty = Empty
     maxHeapify (Node x le ri)

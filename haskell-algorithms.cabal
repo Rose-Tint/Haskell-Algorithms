@@ -1,0 +1,91 @@
+cabal-version: 2.2
+
+
+-- package information
+name:               haskell-algorithms
+version:            0.1.0.0
+synopsis:           (H)askell P(arsing) Framework
+description:        this is a placeholder description
+author:             Rose<https://github.com/Xenovia02>
+maintainer:         Rose<https://github.com/Xenovia02>
+category:           Parsing
+license:            MIT
+license-file:       LICENSE
+extra-source-files: README.md
+
+-- build information
+build-type:         Simple
+-- jobs:               $ncpu
+
+
+common deps
+    build-depends:
+        base == 4.*
+    default-language:
+        Haskell2010
+
+
+common exts
+    other-extensions:
+        FlexibleInstances
+
+
+common oth-mods
+    other-extensions:
+        FlexibleInstances
+    other-modules:
+        Algo.Hash,
+        Structs.Heap,
+        Structs.Tree,
+        Structs.USet
+
+
+common opts
+    ghc-options:
+        -Wall
+        -Werror
+        -Wextra
+        -fhide-source-paths
+        -freverse-errors
+
+
+source-repository head
+    type:
+        git
+    location:
+        https://github.com/Xenovia02/Haskell-Algorithms
+
+
+library
+    import:
+        deps,
+        opts
+    exposed-modules:
+        Algo.Hash,
+        Structs.Heap,
+        Structs.Tree,
+        Structs.USet
+
+
+executable USet-Example
+    import:
+        deps,
+        oth-mods,
+        opts
+    main-is:
+        Examples/USet.hs
+    build-depends:
+        haskell-algorithms
+
+
+test-suite Tree-Test
+    import:
+        deps,
+        oth-mods,
+        opts
+    main-is:
+        Tests/Tree.hs
+    type:
+        exitcode-stdio-1.0
+    build-depends:
+        haskell-algorithms

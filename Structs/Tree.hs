@@ -1,18 +1,8 @@
-module Structs.Tree (
-    Tree(Empty, Node),
-    value,
-    left,
-    right,
-    newTree,
-    insert,
-    search,
-    height,
-    invert,
-    fmerge,
-    size,
-    flatten,
-    balance,
-) where
+module Structs.Tree where
+
+import Control.Applicative
+
+type CompFn a = (a -> a -> Ordering)
 
 
 data Tree a
@@ -30,20 +20,28 @@ newTree a = Node a Empty Empty
 
 -- Worst case: O(log n)
 insert :: (Ord a) => Tree a -> a -> Tree a
-insert Empty y = newTree y
-insert t@(Node x le ri) y
-    | (y == x) = t
-    | (y < x) = Node x (insert le y) ri
-    | otherwise = Node x le (insert ri y)
+insert t y = finsert compare t y
+
+
+finsert :: CompFn a -> Tree a -> a -> Tree a
+finsert _ Empty y = newTree y
+finsert f t@(Node x le ri) y = case f y x of
+    EQ -> t
+    LT -> Node x (finsert f le y) ri
+    GT -> Node x le (finsert f ri y)
 
 
 -- Worst case: O(log n)
 search :: (Ord a) => Tree a -> a -> Tree a
-search Empty _ = Empty
-search t@(Node x le ri) y
-    | (y == x) = t
-    | (y < x) = search le y
-    | otherwise = search ri y
+search = fsearch compare
+
+
+fsearch :: CompFn a -> Tree a -> a -> Tree a
+fsearch _ Empty _ = Empty
+fsearch f t@(Node x le ri) y = case f y x of
+    EQ -> t
+    LT -> fsearch f le y
+    GT -> fsearch f ri y
 
 
 -- O(log n)
@@ -66,9 +64,9 @@ fmerge :: (b -> c -> d) -> Tree b -> Tree c -> Tree d
 fmerge _ Empty Empty = Empty
 fmerge f (Node lx ll lr) (Node rx rl rr)
     = Node (f lx rx) (fmerge f ll rl) (fmerge f lr rr)
-fmerge f Empty ri
+fmerge _ Empty _
     = error "Tree Tree -> fmerge: Trees do not match in structure"
-fmerge f le Empty
+fmerge _ _ Empty
     = error "Tree Tree -> fmerge: Trees do not match in structure"
 
 
@@ -83,18 +81,24 @@ balance :: Tree a -> Tree a
 balance Empty = Empty
 balance t@(Node x le ri)
     | (abs st < 2) = t
-    | (st >= 2 && sl /= -1) = rotR t
-    | (st >= 2 && sl == -1) = rotR $ Node x (rotL le) ri
-    | (st <= -2 && sr /= 1) = rotL $ Node x le ri
-    | (st <= -2 && sr == 1) = rotL $ Node x le (rotR ri)
+    | (st >= 2 && sl /= -1) = rotateR t
+    | (st >= 2 && sl == -1)
+        = rotateR $ Node x (rotateL le) ri
+    | (st <= -2 && sr /= 1)
+        = rotateL $ Node x le ri
+    | (st <= -2 && sr == 1)
+        = rotateL $ Node x le (rotateR ri)
         where
             slope Empty = 0
-            slope (Node _ le ri) = height le - height ri
+            slope (Node _ le' ri') = height le' - height ri'
             (st,sl,sr) = (slope t, slope le, slope ri)
-            rotL (Node x' le' (Node rx rl rr))
+            rotateL (Node x' le' (Node rx rl rr))
                 = balance $ Node rx (balance $ Node x' le' rl) (balance rr)
-            rotR (Node x' (Node lx ll lr) ri')
+            rotateL _ = error "rotateL"
+            rotateR (Node x' (Node lx ll lr) ri')
                 = balance $ Node lx (balance ll) (balance $ Node x' lr ri')
+            rotateR _ = error "rotateR"
+balance _ = error "Balance"
 
 
 -- O(n)
@@ -123,8 +127,10 @@ instance Applicative Tree where
     _ <*> _ = Empty
 
 
-instance Monad Tree where
-    (Node x _ _) >>= f = f x
+instance Alternative Tree where
+    empty = Empty
+    Empty <|> t = t
+    t <|> _ = t
 
 
 instance (Eq t) => Eq (Tree t) where
@@ -132,23 +138,14 @@ instance (Eq t) => Eq (Tree t) where
     (Node av al ar) == (Node bv bl br) = (av == bv) && (al == bl) && (ar == br)
     _ == _ = False
 
-    Empty /= Empty = False
-    (Node av al ar) /= (Node bv bl br) = (av /= bv) || (al /= bl) || (ar /= br)
-    _ /= _ = True
-
 
 instance (Show a) => Show (Tree a) where
-    show = showImpl 0
-
-
-{- IMPLIMENTATION DETAILS -}
-
-showImpl :: (Show a) => Int -> Tree a -> String
-showImpl n Empty = nTabs n ++ "[_]\n"
-showImpl n (Node x Empty Empty) = nTabs n ++ "[" ++ show x ++ "]\n"
-showImpl n (Node x le ri) = showNext le++nTabs n++"["++show x++"]\n"++showNext ri
-    where showNext = showImpl (n + 1)
-
-
-nTabs :: Int -> [Char]
-nTabs n = replicate n '\t'
+    show = impl 0
+        where
+            nTabs :: Int -> String
+            nTabs n = replicate n '\t'
+            impl :: (Show a) => Int -> Tree a -> String
+            impl n Empty = nTabs n ++ "[_]\n"
+            impl n (Node x Empty Empty) = nTabs n ++ "[" ++ show x ++ "]\n"
+            impl n (Node x le ri)
+                = impl (n + 1) le ++ nTabs n ++ "[" ++ show x ++ "]\n" ++ impl (n + 1) ri
