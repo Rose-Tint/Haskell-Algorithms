@@ -2,13 +2,13 @@ cabal-version: 2.2
 
 
 -- package information
-name:               haskell-algorithms
+name:               h-algo
 version:            0.1.0.0
-synopsis:           (H)askell P(arsing) Framework
+synopsis:           (H)askell (Algo)rithms
 description:        this is a placeholder description
 author:             Rose<https://github.com/Xenovia02>
 maintainer:         Rose<https://github.com/Xenovia02>
-category:           Parsing
+category:           General
 license:            MIT
 license-file:       LICENSE
 extra-source-files: README.md
@@ -18,7 +18,7 @@ build-type:         Simple
 -- jobs:               $ncpu
 
 
-common deps
+common dependencies
     build-depends:
         base == 4.*
     default-language:
@@ -30,17 +30,19 @@ common exts
         FlexibleInstances
 
 
-common oth-mods
+common hidden-modules
     other-extensions:
         FlexibleInstances
     other-modules:
         Algo.Hash,
-        Structs.Heap,
-        Structs.Tree,
-        Structs.USet
+        Algo.Insertion,
+        Data.MaxHeap,
+        Data.MinHeap,
+        Data.Tree,
+        Data.USet
 
 
-common opts
+common options
     ghc-options:
         -Wall
         -Werror
@@ -58,34 +60,23 @@ source-repository head
 
 library
     import:
-        deps,
-        opts
+        dependencies,
+        options
     exposed-modules:
         Algo.Hash,
-        Structs.Heap,
-        Structs.Tree,
-        Structs.USet
+        Algo.Insertion,
+        Data.MaxHeap,
+        Data.MinHeap,
+        Data.Tree,
+        Data.USet
 
 
-executable USet-Example
+test-suite Tree
     import:
-        deps,
-        oth-mods,
-        opts
-    main-is:
-        Examples/USet.hs
-    build-depends:
-        haskell-algorithms
-
-
-test-suite Tree-Test
-    import:
-        deps,
-        oth-mods,
-        opts
-    main-is:
-        Tests/Tree.hs
+        dependencies,
+        options,
+        hidden-modules
     type:
         exitcode-stdio-1.0
-    build-depends:
-        haskell-algorithms
+    main-is:
+        Tests/Tree.hs

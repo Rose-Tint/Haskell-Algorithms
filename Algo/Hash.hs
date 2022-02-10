@@ -40,5 +40,6 @@ instance Hashable Integer where
 instance (Hashable a, Foldable t) => Hashable (t a) where
     hash = foldr combine' 0
 
+
 instance Hashable () where
     hash _ = 0

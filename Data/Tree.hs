@@ -1,6 +1,9 @@
-module Structs.Tree where
+module Data.Tree where
+
+import Text.Printf
 
 import Control.Applicative
+
 
 type CompFn a = (a -> a -> Ordering)
 
@@ -12,17 +15,33 @@ data Tree a
         left  :: Tree a,
         right :: Tree a
     }
+    deriving (Show)
+
+
+infixr 8 |^|
+(|^|) :: Tree a -> Tree a -> (Tree a, Tree a)
+(|^|) = (,)
+
+
+infix 9 <^>
+(<^>) :: a -> a -> (Tree a, Tree a)
+a <^> b = (newTree a, newTree b)
+
+
+infixr 7 #
+(#) :: a -> (Tree a, Tree a) -> Tree a
+a # (le, ri) = Node a le ri
 
 
 newTree :: a -> Tree a
 newTree a = Node a Empty Empty
 
 
--- Worst case: O(log n)
 insert :: (Ord a) => Tree a -> a -> Tree a
 insert t y = finsert compare t y
 
 
+-- Worst case: O(log n)
 finsert :: CompFn a -> Tree a -> a -> Tree a
 finsert _ Empty y = newTree y
 finsert f t@(Node x le ri) y = case f y x of
@@ -60,17 +79,6 @@ invert (Node x le ri) = Node x (invert ri) (invert le)
 
 
 -- O(n)
-fmerge :: (b -> c -> d) -> Tree b -> Tree c -> Tree d
-fmerge _ Empty Empty = Empty
-fmerge f (Node lx ll lr) (Node rx rl rr)
-    = Node (f lx rx) (fmerge f ll rl) (fmerge f lr rr)
-fmerge _ Empty _
-    = error "Tree Tree -> fmerge: Trees do not match in structure"
-fmerge _ _ Empty
-    = error "Tree Tree -> fmerge: Trees do not match in structure"
-
-
--- O(n)
 size :: Tree a -> Int
 size Empty = 0
 size (Node _ le ri) = 1 + size le + size ri
@@ -98,13 +106,34 @@ balance t@(Node x le ri)
             rotateR (Node x' (Node lx ll lr) ri')
                 = balance $ Node lx (balance ll) (balance $ Node x' lr ri')
             rotateR _ = error "rotateR"
-balance _ = error "Balance"
+balance _ = error "balance"
 
 
 -- O(n)
 flatten :: Tree a -> [a]
 flatten Empty = []
 flatten (Node x le ri) = flatten le ++ (x:(flatten ri))
+
+
+fromFold :: (Ord a, Foldable t) => t a -> Tree a
+fromFold = foldl insert Empty
+
+
+prettyTree :: (Show a) => Tree a -> String
+prettyTree = impl 0
+    where
+        nTabs :: Int -> String
+        nTabs n = replicate n '\t'
+        impl :: (Show a) => Int -> Tree a -> String
+        impl n (Node x Empty Empty) =
+            printf "%sNode (%s)\n" (nTabs n) (show x)
+        impl n (Node x le ri) =
+            printf "%s%sNode (%s)\n%s" (impl' le) ts (show x) (impl' ri)
+                where
+                    ts = nTabs n
+                    impl' = impl (n + 1)
+        impl n Empty = printf "%sEmpty\n" (nTabs n)
+        -- impl n t = printf "%s%s\n" (nTabs n) (show t)
 
 
 instance Functor Tree where
@@ -135,17 +164,6 @@ instance Alternative Tree where
 
 instance (Eq t) => Eq (Tree t) where
     Empty == Empty = True
-    (Node av al ar) == (Node bv bl br) = (av == bv) && (al == bl) && (ar == br)
+    (Node av al ar) == (Node bv bl br)
+        = (av == bv) && (al == bl) && (ar == br)
     _ == _ = False
-
-
-instance (Show a) => Show (Tree a) where
-    show = impl 0
-        where
-            nTabs :: Int -> String
-            nTabs n = replicate n '\t'
-            impl :: (Show a) => Int -> Tree a -> String
-            impl n Empty = nTabs n ++ "[_]\n"
-            impl n (Node x Empty Empty) = nTabs n ++ "[" ++ show x ++ "]\n"
-            impl n (Node x le ri)
-                = impl (n + 1) le ++ nTabs n ++ "[" ++ show x ++ "]\n" ++ impl (n + 1) ri

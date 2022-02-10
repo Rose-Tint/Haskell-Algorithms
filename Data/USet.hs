@@ -1,11 +1,11 @@
-module Structs.USet (
-    module Structs.Tree,
+module Data.USet (
+    module Data.Tree,
     USet,
     insert,
     search
 ) where
 
-import Structs.Tree hiding (insert, search)
+import Data.Tree hiding (insert, search)
 import Algo.Hash
 
 
