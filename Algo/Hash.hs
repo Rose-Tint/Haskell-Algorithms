@@ -3,6 +3,7 @@
 module Algo.Hash where
 
 import Data.Ord
+import Data.Char
 import Data.Bits
 
 
@@ -37,7 +38,22 @@ instance Hashable Integer where
     hash = fromIntegral
 
 
-instance (Hashable a, Foldable t) => Hashable (t a) where
+instance Hashable Bool where
+    hash True = 1
+    hash False = 0
+
+
+instance Hashable Char where
+    hash = ord
+
+
+instance Hashable Ordering where
+    hash LT = -1
+    hash EQ = 0
+    hash GT = 1
+
+
+instance (Hashable a) => Hashable [a] where
     hash = foldr combine' 0
 
 

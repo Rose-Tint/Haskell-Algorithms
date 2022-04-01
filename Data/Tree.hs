@@ -18,49 +18,33 @@ data Tree a
     deriving (Show)
 
 
-infixr 8 |^|
-(|^|) :: Tree a -> Tree a -> (Tree a, Tree a)
-(|^|) = (,)
+
+new :: a -> Tree a
+new a = Node a Empty Empty
 
 
-infix 9 <^>
-(<^>) :: a -> a -> (Tree a, Tree a)
-a <^> b = (newTree a, newTree b)
+-- |Child Function MAP Tree: fmap a `Tree a -> Tree a` 
+-- function to all children
+cfmapt :: (Tree a -> Tree a) -> Tree a -> Tree a
+cfmapt _ Empty = Empty
+cfmapt f (Node v le ri) = Node v (cfmapt f le) (cfmapt f ri)
 
 
-infixr 7 #
-(#) :: a -> (Tree a, Tree a) -> Tree a
-a # (le, ri) = Node a le ri
-
-
-newTree :: a -> Tree a
-newTree a = Node a Empty Empty
-
-
-insert :: (Ord a) => Tree a -> a -> Tree a
-insert t y = finsert compare t y
+insert :: (Ord a) => a -> Tree a -> Tree a
+insert x Empty = new x
+insert x t@(Node v le ri) = case compare x v of
+    EQ -> t
+    LT -> t { left = insert x le }
+    GT -> t { right = insert x ri }
 
 
 -- Worst case: O(log n)
-finsert :: CompFn a -> Tree a -> a -> Tree a
-finsert _ Empty y = newTree y
-finsert f t@(Node x le ri) y = case f y x of
+search :: (Ord a) => a -> Tree a -> Tree a
+search _ Empty = Empty
+search x t@(Node v le ri) = case compare x v of
     EQ -> t
-    LT -> Node x (finsert f le y) ri
-    GT -> Node x le (finsert f ri y)
-
-
--- Worst case: O(log n)
-search :: (Ord a) => Tree a -> a -> Tree a
-search = fsearch compare
-
-
-fsearch :: CompFn a -> Tree a -> a -> Tree a
-fsearch _ Empty _ = Empty
-fsearch f t@(Node x le ri) y = case f y x of
-    EQ -> t
-    LT -> fsearch f le y
-    GT -> fsearch f ri y
+    LT -> search x le
+    GT -> search x ri
 
 
 -- O(log n)
@@ -115,12 +99,8 @@ flatten Empty = []
 flatten (Node x le ri) = flatten le ++ (x:(flatten ri))
 
 
-fromFold :: (Ord a, Foldable t) => t a -> Tree a
-fromFold = foldl insert Empty
-
-
-prettyTree :: (Show a) => Tree a -> String
-prettyTree = impl 0
+pretty :: (Show a) => Tree a -> String
+pretty = impl 0
     where
         nTabs :: Int -> String
         nTabs n = replicate n '\t'
@@ -150,7 +130,7 @@ instance Foldable Tree where
 
 
 instance Applicative Tree where
-    pure = newTree
+    pure = new
     (Node f fl fr) <*> (Node x le ri)
         = Node (f x) (fl <*> le) (fr <*> ri)
     _ <*> _ = Empty
