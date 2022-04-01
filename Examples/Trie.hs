@@ -13,11 +13,9 @@ default (Int, Double)
 
 list :: [(String, Int)]
 list = zip [
-        "queer",
         "i",
         "apparel",
         "in",
-        "femboy",
         "inn",
         "apple",
         "apply"
