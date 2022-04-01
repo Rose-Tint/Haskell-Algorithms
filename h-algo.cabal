@@ -32,7 +32,9 @@ library
         Data.MaxHeap,
         Data.MinHeap,
         Data.Tree,
-        Data.Trie.Strict
+        Data.Trie
+    other-modules:
+        Data.Trie.Internal
     build-depends:
         base == 4.*,
         array
@@ -59,6 +61,24 @@ executable Trie-Example
     build-depends:
         base == 4.*,
         array,
+        h-algo
+    default-language: Haskell2010
 
+
+test-suite Trie-Tests
+    type: exitcode-stdio-1.0
+    main-is: Tests/Trie.hs
+    other-modules:
+        Tests.Tools,
+        Data.Trie.Internal
+    ghc-options:
+        -Wall
+        -Werror
+        -Wextra
+        -Wno-unused-do-bind
+        -fhide-source-paths
+    build-depends:
+        base == 4.*,
+        array,
         h-algo
     default-language: Haskell2010

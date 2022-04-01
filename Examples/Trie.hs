@@ -2,8 +2,9 @@ module Main where
 
 import Prelude hiding (lookup)
 
-import Control.Monad (foldM, forM)
--- import Data.List ((\\))
+import Control.Monad (foldM, mapM)
+import Data.List ((\\), sortOn)
+import Text.Printf (printf)
 
 import Data.Trie.Strict
 
@@ -13,24 +14,18 @@ default (Int, Double)
 
 list :: [(String, Int)]
 list = zip [
-        "i",
-        "apparel",
-        "in",
-        "inn",
+        -- "i",
         "apple",
-        "apply"
+        "apparel",
+        -- "in",
+        -- "inn",
+        "apply",
+        "app",
+        "apart",
+        "apps",
+        "appetizer",
+        "appeal"
     ] [0..]
--- list = [
---         ("A", 15),
---         ("to", 7),
---         ("tea", 3),
---         ("tee", 8),
---         ("ted", 4),
---         ("ten", 12),
---         ("i", 11),
---         ("in", 5),
---         ("inn", 9)
---     ]
 
 
 -- trie :: Trie Int
@@ -39,22 +34,26 @@ list = zip [
 
 main :: IO ()
 main = do
-    putStrLn "list: "
-    forM list $! \pair ->
-        putStrLn $! "    " ++ show pair
-    putStrLn "\nSteps:"
-    foldM (\trie (str, n) -> do
+    -- putStrLn "list: "
+    -- forM list $! \pair ->
+    --     putStrLn $! "    " ++ show pair
+    -- putStrLn "\nSteps:"
+    trie <- foldM (\trie (str, n) -> do
             putStrLn $! "Insertion: " ++ show (str, n)
             let trie' = insert str n trie
             printTrie trie'
-            putStrLn $! replicate 25 '~' ++ "\n"
+            putStrLn $! replicate 35 '~'
             return $! trie')
         empty list
-    return ()
-    -- putStrLn "fromList:"
-    -- printTrie trie
-    -- putStrLn $! "\n\ntoList:"
-    -- putStrLn $! "list == toList (fromList list)?: "
-    --     ++ show (null (list \\ toList trie))
+    putStrLn "\n\nfromList:"
+    printTrie trie
+    putStrLn $! "\n\ntoList:"
+    let list' = toList trie
+    mapM (\(a, b) ->
+        printf "%-16s, %s\n" (show a) (show b)) $!
+        zip list (sortOn snd list')
+    putStrLn $! "list == toList (fromList list)?: "
+        ++ show (null (list \\ list'))
     -- putStrLn "\nshow: "
     -- print trie
+    return ()
