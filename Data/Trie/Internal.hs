@@ -123,6 +123,7 @@ insertWith f (c:cs) a trie = updateChildAt c
 
 -- |Deprecated for users
 search :: String -> Trie a -> Trie a
+{-# INLINABLE search #-}
 search [] !trie = trie
 search str@(c:cs) trie = case trie of
     Empty -> Empty
@@ -162,6 +163,7 @@ infixl 9 ??
 
 -- |Deletes the value at the given key.
 delete :: String -> Trie a -> Trie a
+{-# INLINABLE delete #-}
 delete [] trie = trie
 delete [_] (Node chn _)
     | all isEmpty chn = Empty
@@ -173,6 +175,7 @@ delete (c:cs) trie = updateChildAt c (delete cs) trie
 -- |Update the value at the given key with the given
 -- function
 adjust :: (a -> a) -> String -> Trie a -> Trie a
+{-# INLINABLE adjust #-}
 adjust _ _ Empty = Empty
 adjust _ [] trie = trie
 adjust f [_] trie@(Node _ a) = let !a' = f a in
@@ -186,6 +189,7 @@ adjust f (c:cs) trie = updateChildAt c (adjust f cs) trie
 -- deleted, but if it is @`Just` val@ then the value
 -- at @key@ is @val@0
 update :: (a -> Maybe a) -> String -> Trie a -> Trie a
+{-# INLINABLE update #-}
 update _ _ Empty = Empty
 update _ [] trie = trie
 update f [_] (Node chn a) = let !a' = f a in case a' of
@@ -292,6 +296,7 @@ elems (Node chn a) = foldr ((++) . elems) [a] chn
 -- |Returns a list of key-value pairs, where the values
 -- are all values whose key starts with the given string
 assocsWithPrefix :: String -> Trie a -> [(String, a)]
+{-# INLINABLE assocsWithPrefix #-}
 assocsWithPrefix _ Empty = []
 assocsWithPrefix pref (Link !chn com) = concatMap (
     \(c,trie) -> assocsWithPrefix
@@ -304,6 +309,7 @@ assocsWithPrefix pref (Node !chn !a) = (pref, a) :
 -- |Returns a list of all keys that start with the given
 -- string
 keysWithPrefix :: String -> Trie a -> [String]
+{-# INLINE keysWithPrefix #-}
 keysWithPrefix pref trie = let !trie' = search pref trie
     in fmap (pref ++) $! keys trie'
 
@@ -409,6 +415,7 @@ link = Link newChildren []
 
 
 compressChildren :: Children a -> Children a
+{-# INLINABLE compressChildren #-}
 compressChildren = fmap $ \a -> case a of
     Empty -> Empty
     Link chn _ -> let !chn' = compressChildren chn in
