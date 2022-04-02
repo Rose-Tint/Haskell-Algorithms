@@ -91,6 +91,8 @@ insertWith :: (a -> a -> a) -> String -> a -> Trie a
            -> Trie a
 insertWith _ [] _ !trie = trie
 insertWith _ !str !a Empty = singleton str a
+-- `a1` is not strict here because it does not need to
+-- be strict in collision
 insertWith f [c] a1 !trie = setChildAt c newChild trie
     where
         newChild = case getChildAt c trie of
@@ -124,7 +126,8 @@ insertWith f (c:cs) a trie = updateChildAt c
 -- |Deprecated for users
 search :: String -> Trie a -> Trie a
 {-# INLINABLE search #-}
-search [] !trie = trie
+search [] trie = trie
+search _ Empty = Empty
 search str@(c:cs) trie = case trie of
     Empty -> Empty
     Link chn com -> case keyDiff str com of
