@@ -9,7 +9,8 @@ import Data.Array hiding (
     elems
     )
 import qualified Data.Array as A
-import Data.Maybe (isNothing)
+import Data.Maybe (isNothing, fromMaybe)
+import Data.Semigroup
 
 default (Int)
 
@@ -38,11 +39,13 @@ data Trie a
 
 {- %%%%%%%%%% Construction %%%%%%%%%% -}
 
+-- |Creates an empty trie
 empty :: Trie a
 {-# INLINE empty #-}
 empty = Empty
 
 
+-- |Creates a trie from a list of key-value pairs
 fromList :: [(String, a)] -> Trie a
 {-# INLINE fromList #-}
 fromList [] = empty
@@ -50,26 +53,15 @@ fromList [(!str, !a)] = singleton str a
 fromList ((!str, !a):rest) = insert str a $! fromList rest
 
 
-assocs :: Trie a -> [(String, a)]
-assocs trie = case trie of
-    Empty -> []
-    Link !chn com -> map' com chn
-    Node !chn !a -> (([], a):map' [] chn)
-    where
-        map' !done = concatMap (go done) . A.assocs
-        go !done (c, trie') = case trie' of
-            Empty -> []
-            Link !chn com -> map' (done ++ (c:com)) chn
-            Node !chn !a -> let key = done ++ [c] in
-                ((key, a):map' key chn)
-
-
+-- |Generalization of @`fromList`@ to all @`Foldable`@
+-- instances
 fromFold :: (Foldable t) => t (String, a) -> Trie a
 {-# INLINE fromFold #-}
 fromFold = foldr (\(!str, !a) !build ->
     insert str a build) Empty
 
 
+-- |Creates a single-element trie
 singleton :: String -> a -> Trie a
 {-# INLINE singleton #-}
 singleton [] a = node a
@@ -78,20 +70,23 @@ singleton !str !a = let (cs, c) = (init str, last str)
     in Link (oneChild c (node a)) cs
 
 
--- |Replaces existing values
+-- |Inserts a value at the given key. If a value at
+-- that key already exists, it will be replaced.
 push :: String -> a -> Trie a -> Trie a
 {-# INLINE push #-}
 push = insertWith (flip const)
 
 
--- |Does not replace an existing value
+-- |Inserts a value at the given key. If a value at
+-- that key already exists, nothing will happen.
 insert :: String -> a -> Trie a -> Trie a
 {-# INLINE insert #-}
 insert = insertWith const
 
 
--- |The first argument to the function given to
--- `insertWith` is the original value
+-- |@`insertWith` f key val trie@ inserts @val@ at
+-- @key@. If a value @old@ at that key already exists,
+-- it is replaced with @f old val@.
 insertWith :: (a -> a -> a) -> String -> a -> Trie a
            -> Trie a
 insertWith _ [] _ !trie = trie
@@ -126,6 +121,7 @@ insertWith f (c:cs) a trie = updateChildAt c
 
 {- %%%%%%%%%% Query %%%%%%%%%% -}
 
+-- |Deprecated for users
 search :: String -> Trie a -> Trie a
 search [] !trie = trie
 search str@(c:cs) trie = case trie of
@@ -139,6 +135,8 @@ search str@(c:cs) trie = case trie of
     _ -> search cs $! getChildAt c trie
 
 
+-- |Searches the trie for the given key. Returns
+-- @`Just` val@ if found, and @`Nothing`@ otherwise
 lookup :: String -> Trie a -> Maybe a
 {-# INLINE lookup #-}
 lookup str trie = case search str trie of
@@ -146,65 +144,55 @@ lookup str trie = case search str trie of
     _ -> Nothing
 
 
+-- |Searches the trie for the given key, returning
+-- the default value if not found.
 findWithDefault :: a -> String -> Trie a -> a
 {-# INLINE findWithDefault #-}
-findWithDefault def str trie = case lookup str trie of
-    Nothing -> def `seq ` def
-    Just !res -> res
+findWithDefault def str = fromMaybe def . lookup str
 
 
-assocsWithPrefix :: String -> Trie a -> [(String, a)]
-assocsWithPrefix _ Empty = []
-assocsWithPrefix pref (Link !chn com) = concatMap (
-    \(c,trie) -> assocsWithPrefix
-        (pref ++ com ++ [c]) trie) (A.assocs chn)
-assocsWithPrefix pref (Node !chn !a) = (pref, a) :
-    concatMap (\(c,trie) -> assocsWithPrefix
-        (pref ++ [c]) trie) (A.assocs chn)
-
-
-keysWithPrefix :: String -> Trie a -> [String]
-keysWithPrefix pref trie = let !trie' = search pref trie
-    in fmap (pref ++) $! keys trie'
-
-
-elemsWithPrefix :: String -> Trie a -> [a]
-{-# INLINE elemsWithPrefix #-}
-elemsWithPrefix pref = elems . search pref
-
-
+-- |Operator alias for @`flip` `lookup`@
 infixl 9 ??
-{-# INLINE (??) #-}
 (??) :: Trie a -> String -> Maybe a
+{-# INLINE (??) #-}
 (??) = flip lookup
 
 
 {- %%%%%%%%%% Deletion/Updating %%%%%%%%%% -}
 
+-- |Deletes the value at the given key.
 delete :: String -> Trie a -> Trie a
 delete [] trie = trie
-delete [_] (Node _ _) = Empty
+delete [_] (Node chn _)
+    | all isEmpty chn = Empty
+    | otherwise = Link chn []
 delete [_] trie = trie
 delete (c:cs) trie = updateChildAt c (delete cs) trie
 
 
-adjust :: String -> (a -> a) -> Trie a -> Trie a
+-- |Update the value at the given key with the given
+-- function
+adjust :: (a -> a) -> String -> Trie a -> Trie a
 adjust _ _ Empty = Empty
-adjust [] _ trie = trie
-adjust [_] f trie@(Node _ a) = let !a' = f a in
+adjust _ [] trie = trie
+adjust f [_] trie@(Node _ a) = let !a' = f a in
     trie { trieValue = a' }
 -- adjust [_] _ trie = trie
-adjust (c:cs) f trie = updateChildAt c (adjust cs f) trie
+adjust f (c:cs) trie = updateChildAt c (adjust f cs) trie
 
 
-update :: String -> (a -> Maybe a) -> Trie a -> Trie a
+-- |In the expression @`update` f key trie@, if
+-- @f old@ is @`Nothing`@, it the value at @key@ is
+-- deleted, but if it is @`Just` val@ then the value
+-- at @key@ is @val@0
+update :: (a -> Maybe a) -> String -> Trie a -> Trie a
 update _ _ Empty = Empty
-update [] _ trie = trie
-update [_] f (Node chn a) = let !a' = f a in case a' of
+update _ [] trie = trie
+update f [_] (Node chn a) = let !a' = f a in case a' of
     Nothing -> Link chn [] -- effectively delete
     Just a'' -> Node chn a''
 -- update [_] _ trie = trie
-update (c:cs) f trie = updateChildAt c (update cs f) trie
+update f (c:cs) trie = updateChildAt c (update f cs) trie
 
 
 {- %%%%%%%%%% Combining %%%%%%%%%% -}
@@ -271,12 +259,29 @@ union l1@(Link chn1 com1) l2@(Link chn2 com2)
 
 {- %%%%%%%%%% Other %%%%%%%%%% -}
 
+-- |Returns a list of the key-value pairs
+assocs :: Trie a -> [(String, a)]
+assocs trie = case trie of
+    Empty -> []
+    Link !chn com -> map' com chn
+    Node !chn !a -> (([], a):map' [] chn)
+    where
+        map' !done = concatMap (go done) . A.assocs
+        go !done (c, trie') = case trie' of
+            Empty -> []
+            Link !chn com -> map' (done ++ (c:com)) chn
+            Node !chn !a -> let key = done ++ [c] in
+                ((key, a):map' key chn)
+
+
+-- |Returns a list of all keys in the trie
 keys :: Trie a -> [String]
 {-# INLINE keys #-}
 keys Empty = []
 keys trie = foldr ((++) . keys) [] (trieChildren trie)
 
 
+-- |Returns a list of all values in the trie
 elems :: Trie a -> [a]
 {-# INLINE elems #-}
 elems Empty = []
@@ -284,6 +289,33 @@ elems (Link chn _) = foldr ((++) . elems) [] chn
 elems (Node chn a) = foldr ((++) . elems) [a] chn
 
 
+-- |Returns a list of key-value pairs, where the values
+-- are all values whose key starts with the given string
+assocsWithPrefix :: String -> Trie a -> [(String, a)]
+assocsWithPrefix _ Empty = []
+assocsWithPrefix pref (Link !chn com) = concatMap (
+    \(c,trie) -> assocsWithPrefix
+        (pref ++ com ++ [c]) trie) (A.assocs chn)
+assocsWithPrefix pref (Node !chn !a) = (pref, a) :
+    concatMap (\(c,trie) -> assocsWithPrefix
+        (pref ++ [c]) trie) (A.assocs chn)
+
+
+-- |Returns a list of all keys that start with the given
+-- string
+keysWithPrefix :: String -> Trie a -> [String]
+keysWithPrefix pref trie = let !trie' = search pref trie
+    in fmap (pref ++) $! keys trie'
+
+
+-- |Returns a list of all values whose key starts with
+-- the given string
+elemsWithPrefix :: String -> Trie a -> [a]
+{-# INLINE elemsWithPrefix #-}
+elemsWithPrefix pref = elems . search pref 
+
+
+-- |The size of the trie
 size :: Trie a -> Int
 {-# INLINE size #-}
 size Empty = 0 :: Int
@@ -293,15 +325,17 @@ size (Node chn _) = foldr (\a !b ->
     b + size a) (1 :: Int) chn
 
 
+-- |@`size`@ generalized to any @`Num`@ instance
 genSize :: (Num n) => Trie a -> n
 {-# INLINE genSize #-}
-genSize Empty = 0
+genSize Empty = fromInteger 0
 genSize (Link chn _) = foldr (\a !b ->
-    b + genSize a) 0 chn
+    b + genSize a) (fromInteger 0) chn
 genSize (Node chn _) = foldr (\a !b ->
-    b + genSize a) 1 chn
+    b + genSize a) (fromInteger 1) chn
 
 
+-- |Returns whether or not the trie is empty
 isEmpty :: Trie a -> Bool
 {-# INLINE isEmpty #-}
 isEmpty Empty = True
@@ -309,27 +343,27 @@ isEmpty (Link chn _) = all isEmpty chn
 isEmpty (Node _ _) = False
 
 
+-- |Checks if the key exists in the trie
 isMemberOf :: String -> Trie a -> Bool
 {-# INLINE isMemberOf #-}
-isMemberOf _ Empty = False
-isMemberOf [] (Node _ _) = True
-isMemberOf [] _ = False
-isMemberOf str trie
-    | isEmpty trie = False
-    | otherwise = isNothing (lookup str trie)
+isMemberOf str = isNothing . lookup str
+-- isMemberOf _ Empty = False
+-- isMemberOf [] (Node _ _) = True
+-- isMemberOf [] _ = False
+-- isMemberOf str@(c:cs) (Link chn com) =
+--     case keyDiff str com of
+--         Equal -> False
+--         NoPrefix -> False
+-- isMemberOf str@(c:cs) (Node chn _) =
+--     cs `isMemberOf` chn!c
 
 
+-- |Removes excess trie nodes. Typically not needed.
 compress :: Trie a -> Trie a
 {-# INLINE compress #-}
 compress Empty = Empty
 compress trie = trie { trieChildren =
     compressChildren $! trieChildren trie }
-
-
-alloc :: [String] -> Trie a
-{-# INLINE alloc #-}
-alloc [] = Empty
-alloc (str:strs) = alloc strs <> common str
 
 
 {- %%%%%%%%%% Pretty %%%%%%%%%% -}
@@ -448,10 +482,7 @@ data KeyDiff
     | Diff String String String
     deriving (Show, Eq)
 
--- |Returns `(prefix, rest1, rest2)` where `prefix` is
--- the longest shared prefix, `rest1` and `rest2`
--- correspond to what is after the prefix in the first
--- and second arguments
+
 keyDiff :: String -> String -> KeyDiff
 {-# INLINE keyDiff #-}
 keyDiff [] [] = Equal
@@ -494,6 +525,8 @@ instance Foldable Trie where
 
 instance Semigroup (Trie a) where
     (<>) = union
+    -- union is idempotent (i.e. trie `union` trie == trie).
+    stimes = stimesIdempotentMonoid
 
 
 instance Monoid (Trie a) where
