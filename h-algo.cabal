@@ -24,7 +24,30 @@ source-repository head
         https://github.com/Xenovia02/Haskell-Algorithms
 
 
+common general
+    build-depends:
+        base == 4.*
+        -- deepseq
+    default-language:
+        Haskell2010
+    other-extensions:
+        BangPatterns,
+        Rank2Types
+        -- DeriveGeneric
+    ghc-options:
+        -O2
+        -fhide-source-paths
+        -fshow-warning-groups
+        -Wall
+        -Wcompat
+        -Wno-unused-do-bind
+        -Werror
+        -Wwarn=unused-imports
+    
+
+
 library
+    import: general
     exposed-modules:
         Algo.Hash,
         Algo.Insertion,
@@ -36,49 +59,39 @@ library
     other-modules:
         Data.Trie.Internal
     build-depends:
-        base == 4.*,
         array
-    default-language:
-        Haskell2010
-    ghc-options:
-        -Wall
-        -Werror
-        -Wextra
-        -fhide-source-paths
 
 
 
-executable Trie-Example
-    main-is: Examples/Trie.hs
+executable Trie-Profile
+    import: general
+    main-is: Benchmarks/Trie.hs
     other-modules:
-        Data.Trie.Strict
-    ghc-options:
-        -Wall
-        -Werror
-        -Wextra
-        -Wno-unused-do-bind
-        -fhide-source-paths
+        -- Benchmarks.Tools
+        Data.Trie
+        Data.Trie.Internal
     build-depends:
-        base == 4.*,
         array,
+        time,
         h-algo
-    default-language: Haskell2010
 
 
 test-suite Trie-Tests
+    import: general
     type: exitcode-stdio-1.0
     main-is: Tests/Trie.hs
     other-modules:
         Tests.Tools,
         Data.Trie.Internal
-    ghc-options:
-        -Wall
-        -Werror
-        -Wextra
-        -Wno-unused-do-bind
-        -fhide-source-paths
     build-depends:
-        base == 4.*,
         array,
         h-algo
-    default-language: Haskell2010
+
+
+benchmark Trie-bm
+    import: general
+    type: exitcode-stdio-1.0
+    main-is: Benchmarks/Trie.hs
+    build-depends:
+        time,
+        h-algo

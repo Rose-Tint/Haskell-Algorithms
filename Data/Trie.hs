@@ -9,9 +9,9 @@ module Data.Trie (Trie,
     -- Deletion/Updating
     delete, adjust, update,
     -- Combination
-    -- union, difference, intersect,
+    union, -- difference, intersect,
     -- Other
-    isEmpty, toList, size, genSize, isMemberOf,
+    isEmpty, assocs, size, genSize, isMemberOf,
     compress,
     -- Pretty
     prettyTrie, printTrie,
