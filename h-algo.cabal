@@ -35,7 +35,7 @@ common general
         Rank2Types
         -- DeriveGeneric
     ghc-options:
-        -O2
+        -O0
         -fhide-source-paths
         -fshow-warning-groups
         -Wall
@@ -56,8 +56,6 @@ library
         Data.MinHeap,
         Data.Tree,
         Data.Trie
-    other-modules:
-        Data.Trie.Internal
     build-depends:
         array
 
@@ -69,20 +67,31 @@ executable Trie-Profile
     other-modules:
         -- Benchmarks.Tools
         Data.Trie
-        Data.Trie.Internal
     build-depends:
         array,
         time,
         h-algo
 
 
-test-suite Trie-Tests
+test-suite Trie-Test-Insert
     import: general
     type: exitcode-stdio-1.0
-    main-is: Tests/Trie.hs
+    main-is: Tests/Trie/Insert.hs
     other-modules:
         Tests.Tools,
-        Data.Trie.Internal
+        Data.Trie
+    build-depends:
+        array,
+        h-algo
+
+
+test-suite Trie-Test-Lookup
+    import: general
+    type: exitcode-stdio-1.0
+    main-is: Tests/Trie/Lookup.hs
+    other-modules:
+        Tests.Tools,
+        Data.Trie
     build-depends:
         array,
         h-algo

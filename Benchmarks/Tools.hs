@@ -4,7 +4,7 @@ module Benchmarks.Tools where
 
 import Control.DeepSeq (NFData, deepseq)
 import Control.Monad ((<$!>))
-import Data.Bits ((.&.))
+import Data.Bits
 import Data.Time.Clock.System
 import Data.Word
 
@@ -23,6 +23,18 @@ data Timer = Timer {
     }
 
 
+
+nextRand :: Int -> Int
+nextRand x = go (go (go x 15) (-17)) 5
+    } where
+        go !x' !n = x' `xor` (x' `shift` n)
+
+
+benchmark :: Int -> Int -> (Int -> a -> b) -> b -> Benchmark
+benchmark seed iters f b = 
+
+
+{-
 randRange :: Int -> Int -> IO Int
 randRange mn mx = do
     n <- systemNanoseconds <$!> getSystemTime
@@ -107,3 +119,4 @@ shuffle str@(c:_) =
         shuffle right ++ shuffle left
     where
         (left, right) = splitAt (length str `div` 2) str
+-}

@@ -14,10 +14,10 @@ insert_test :: Test ((String, Int), Trie Int) (Trie Int)
 insert_test = Test {
         testName = "insert",
         testFunc = \((s, n), t) -> insert s n t,
-        testExpect = undefined,
         testAsserter = (==),
         testPrintIn = \_ -> print . fst,
-        testPrintOut = \_ t -> putStr "\n" >> printTrie t
+        testPrintOut = \_ _ -> putStrLn "",
+        testPrintSucc = False
 }
 
 
@@ -77,9 +77,4 @@ main = do
     insert_res <- foldTests insert_test empty insert_values
     case insert_res of
         Fail -> exitFailure
-        Pass trie -> do
-            putStrLn $! replicate 35 '~'
-            printTrie trie
-            putStrLn $! replicate 35 '~'
-            exitSuccess
-        Pass_ -> exitSuccess
+        _ -> exitSuccess
